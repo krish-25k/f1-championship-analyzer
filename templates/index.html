@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Race Analyzer</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background-color: #f8f9fa; color: #212529; }
+        header { background-color: #e60000; color: white; padding: 20px 40px; text-align: center; }
+        header h1 { margin: 0; font-size: 2.5rem; }
+        .nav-links {
+            margin-top: 15px;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.2);
+            transition: background 0.3s;
+        }
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
+        .filters { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
+        .filters label { font-weight: bold; margin-right: 10px; }
+        .filters select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 1rem; }
+        .filters button { padding: 8px 15px; background-color: #1e90ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .card h2 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
+        th { background-color: #f2f2f2; }
+        .plotly-chart { width: 100%; min-height: 500px; }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+
+    <header>
+        <h1>🏁 F1 Race Analyzer</h1>
+        <div class="nav-links">
+            <a href="/">Season Overview</a>
+            <a href="/points-progression">Points Progression</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="filters">
+            <form id="seasonForm">
+                <label for="season">Select Season:</label>
+                <select id="season" name="season">
+                    {% for year in seasons %}
+                        <option value="{{ year }}" {% if year == selected_season %}selected{% endif %}>{{ year }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit">Load Data</button>
+            </form>
+        </div>
+        
+        {% if error %}
+            <div class="card">
+                <h2>Data Notice</h2>
+                <p>{{ error }}</p>
+            </div>
+        {% else %}
+            <div class="grid">
+                <div class="card">
+                    <h2>Driver Standings 🏎️</h2>
+                    {% if driver_table %}
+                        {{ driver_table|safe }}
+                    {% else %}
+                        <p>No driver data available.</p>
+                    {% endif %}
+                </div>
+                <div class="card">
+                    <h2>Constructor Standings 🏭</h2>
+                    {% if constructor_table %}
+                        {{ constructor_table|safe }}
+                    {% else %}
+                        <p>No constructor data available.</p>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        document.getElementById('seasonForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const selectedSeason = document.getElementById('season').value;
+            window.location.href = '/' + selectedSeason;
+        });
+    </script>
+
+</body>
+</html>

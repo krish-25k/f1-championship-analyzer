@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Points Progression Analyzer</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; 
+            background-color: #f8f9fa; 
+            color: #212529; 
+        }
+        header { 
+            background: linear-gradient(135deg, #e60000, #ff4444);
+            color: white; 
+            padding: 20px 40px; 
+            text-align: center; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        header h1 { 
+            margin: 0; 
+            font-size: 2.5rem; 
+        }
+        .nav-links {
+            margin-top: 15px;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.2);
+            transition: background 0.3s;
+        }
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        .container { 
+            max-width: 1400px; 
+            margin: 20px auto; 
+            padding: 0 20px; 
+        }
+        .controls { 
+            background-color: white; 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            margin-bottom: 25px; 
+        }
+        .control-group {
+            margin-bottom: 20px;
+        }
+        .control-group label { 
+            font-weight: bold; 
+            margin-right: 10px; 
+            display: inline-block;
+            min-width: 120px;
+        }
+        .control-group select, .control-group input { 
+            padding: 10px; 
+            border-radius: 6px; 
+            border: 2px solid #ddd; 
+            font-size: 1rem; 
+            min-width: 200px;
+        }
+        .control-group select:focus, .control-group input:focus {
+            border-color: #1e90ff;
+            outline: none;
+        }
+        .drivers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .driver-checkbox {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            transition: background 0.2s;
+        }
+        .driver-checkbox:hover {
+            background: #e9ecef;
+        }
+        .driver-checkbox input {
+            margin-right: 8px;
+            min-width: auto;
+        }
+        .driver-checkbox label {
+            margin: 0;
+            min-width: auto;
+            cursor: pointer;
+            flex: 1;
+        }
+        .action-buttons {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .btn { 
+            padding: 12px 25px; 
+            background: linear-gradient(135deg, #1e90ff, #0066cc);
+            color: white; 
+            border: none; 
+            border-radius: 25px; 
+            cursor: pointer; 
+            font-size: 1rem; 
+            margin: 0 10px;
+            transition: all 0.3s;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(30, 144, 255, 0.3);
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #495057);
+        }
+        .btn-secondary:hover {
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+        }
+        .chart-container { 
+            background-color: white; 
+            padding: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            margin-bottom: 25px;
+        }
+        .plotly-chart { 
+            width: 100%; 
+            min-height: 600px; 
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 1.2rem;
+            color: #666;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border: 1px solid #c3e6cb;
+        }
+        @media (max-width: 768px) {
+            .drivers-grid {
+                grid-template-columns: 1fr;
+            }
+            .control-group {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .control-group label {
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+
+    <header>
+        <h1>📊 F1 Points Progression Analyzer</h1>
+        <div class="nav-links">
+            <a href="/">Season Overview</a>
+            <a href="/points-progression">Points Progression</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="controls">
+            <div class="control-group">
+                <label for="season">Season:</label>
+                <select id="season" name="season">
+                    {% for year in seasons %}
+                        <option value="{{ year }}" {% if year == selected_season %}selected{% endif %}>{{ year }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="up-to-round">Show up to Round (optional):</label>
+                <select id="up-to-round" name="up-to-round">
+                    <option value="">All rounds</option>
+                    {% for race in races %}
+                        <option value="{{ race.round }}">Up to Round {{ race.round }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Select Drivers (max 10):</label>
+                <div class="drivers-grid" id="drivers-grid">
+                    {% for driver in drivers %}
+                        <div class="driver-checkbox">
+                            <input type="checkbox" id="driver-{{ loop.index }}" name="drivers" value="{{ driver.name }}">
+                            <label for="driver-{{ loop.index }}">{{ driver.name }} ({{ driver.points }} pts)</label>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn" id="load-progression" onclick="loadProgression()">
+                    Load Points Progression
+                </button>
+                <button class="btn btn-secondary" onclick="clearSelection()">
+                    Clear Selection
+                </button>
+            </div>
+        </div>
+
+        <div id="info-message" class="info" style="display: none;">
+            Select a season and drivers to see how their championship points accumulated throughout the season.
+        </div>
+
+        <div id="error-message" class="error" style="display: none;"></div>
+
+        <div id="chart-container" class="chart-container" style="display: none;">
+            <div id="plotly-chart" class="plotly-chart"></div>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div>📊 Loading points progression data...</div>
+            <div style="margin-top: 10px; font-size: 0.9rem;">Analyzing championship battle</div>
+        </div>
+    </div>
+
+    <script>
+        // Show initial info message
+        document.getElementById('info-message').style.display = 'block';
+
+        // Handle season change
+        document.getElementById('season').addEventListener('change', function() {
+            const selectedSeason = this.value;
+            window.location.href = '/points-progression/' + selectedSeason;
+        });
+
+        // Limit driver selection to 10
+        document.addEventListener('change', function(event) {
+            if (event.target.name === 'drivers') {
+                const checkboxes = document.querySelectorAll('input[name="drivers"]');
+                const checkedBoxes = document.querySelectorAll('input[name="drivers"]:checked');
+                
+                if (checkedBoxes.length > 10) {
+                    event.target.checked = false;
+                    showError('Please select maximum 10 drivers for better chart readability.');
+                    return;
+                }
+                
+                // Enable/disable load button based on selections
+                const loadBtn = document.getElementById('load-progression');
+                loadBtn.disabled = !(checkedBoxes.length > 0);
+            }
+        });
+
+        function loadProgression() {
+            const season = document.getElementById('season').value;
+            const checkedBoxes = document.querySelectorAll('input[name="drivers"]:checked');
+            const selectedDrivers = Array.from(checkedBoxes).map(cb => cb.value);
+            const upToRound = document.getElementById('up-to-round').value;
+
+            if (selectedDrivers.length === 0) {
+                showError('Please select at least one driver.');
+                return;
+            }
+
+            // Show loading
+            showLoading(true);
+            hideError();
+            hideInfo();
+
+            // Build query parameters
+            const params = new URLSearchParams();
+            params.append('season', season);
+            selectedDrivers.forEach(driver => params.append('drivers', driver));
+            if (upToRound) {
+                params.append('up_to_round', upToRound);
+            }
+
+            // Fetch data
+            fetch(`/api/points-progression?${params}`)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => Promise.reject(err));
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    showLoading(false);
+                    displayChart(data);
+                })
+                .catch(error => {
+                    showLoading(false);
+                    showError(error.error || 'Failed to load points progression data.');
+                });
+        }
+
+        function displayChart(data) {
+            const chartData = JSON.parse(data.chart);
+            
+            Plotly.newPlot('plotly-chart', chartData.data, chartData.layout, {
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false,
+                modeBarButtonsToRemove: ['pan2d', 'lasso2d']
+            });
+            
+            document.getElementById('chart-container').style.display = 'block';
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('input[name="drivers"]').forEach(cb => cb.checked = false);
+            document.getElementById('up-to-round').value = '';
+            document.getElementById('load-progression').disabled = true;
+            document.getElementById('chart-container').style.display = 'none';
+            document.getElementById('info-message').style.display = 'block';
+            hideError();
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+            document.getElementById('load-progression').disabled = show;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error-message');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('error-message').style.display = 'none';
+        }
+
+        function hideInfo() {
+            document.getElementById('info-message').style.display = 'none';
+        }
+
+        // Initial button state
+        document.getElementById('load-progression').disabled = true;
+    </script>
+
+</body>
+</html>

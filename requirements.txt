@@ -1,0 +1,7 @@
+flask
+pandas
+requests
+plotly
+lxml
+beautifulsoup4
+markupsafe
