@@ -23,6 +23,16 @@
         .nav-links a:hover {
             background: rgba(255,255,255,0.3);
         }
+        .driver-link {
+            color: #e60000;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+        .driver-link:hover {
+            color: #ff4444;
+            text-decoration: underline;
+        }
         .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
         .filters { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
         .filters label { font-weight: bold; margin-right: 10px; }
@@ -72,7 +82,7 @@
                 <div class="card">
                     <h2>Driver Standings 🏎️</h2>
                     {% if driver_table %}
-                        {{ driver_table|safe }}
+                        <div id="driver-table-container">{{ driver_table|safe }}</div>
                     {% else %}
                         <p>No driver data available.</p>
                     {% endif %}
@@ -94,6 +104,35 @@
             event.preventDefault();
             const selectedSeason = document.getElementById('season').value;
             window.location.href = '/' + selectedSeason;
+        });
+
+        // Make driver names clickable
+        document.addEventListener('DOMContentLoaded', function() {
+            const selectedSeason = {{ selected_season }};
+            const driverTable = document.getElementById('driver-table-container');
+            
+            if (driverTable) {
+                // Find all table rows (skip header)
+                const rows = driverTable.querySelectorAll('table tbody tr');
+                
+                rows.forEach(row => {
+                    const driverCell = row.cells[0]; // First cell contains driver name
+                    if (driverCell) {
+                        const driverName = driverCell.textContent.trim();
+                        
+                        // Create clickable link
+                        const link = document.createElement('a');
+                        link.href = `/driver/${encodeURIComponent(driverName)}/${selectedSeason}`;
+                        link.className = 'driver-link';
+                        link.textContent = driverName;
+                        link.title = `View ${driverName}'s ${selectedSeason} season details`;
+                        
+                        // Replace cell content with link
+                        driverCell.innerHTML = '';
+                        driverCell.appendChild(link);
+                    }
+                });
+            }
         });
     </script>
 

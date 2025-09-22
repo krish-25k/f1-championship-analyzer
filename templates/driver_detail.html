@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if driver %}{{ driver.name }} - {{ driver.season }} Season{% else %}Driver Details{% endif %}</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; 
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            color: #212529; 
+            min-height: 100vh;
+        }
+        header { 
+            background: linear-gradient(135deg, #e60000, #ff4444);
+            color: white; 
+            padding: 20px 40px; 
+            text-align: center; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        header h1 { 
+            margin: 0; 
+            font-size: 2.5rem; 
+        }
+        .nav-links {
+            margin-top: 15px;
+        }
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.2);
+            transition: all 0.3s;
+        }
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+        .container { 
+            max-width: 1200px; 
+            margin: 20px auto; 
+            padding: 0 20px; 
+        }
+        .driver-header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 25px;
+            align-items: center;
+        }
+        .driver-photo {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #e60000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .default-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #e60000, #ff6b6b);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2.5rem;
+            font-weight: bold;
+            border: 4px solid #e60000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .driver-info h2 {
+            margin: 0 0 10px 0;
+            font-size: 2.2rem;
+            color: #e60000;
+        }
+        .driver-info .season {
+            font-size: 1.3rem;
+            color: #666;
+            margin-bottom: 15px;
+        }
+        .driver-info .constructor {
+            font-size: 1.1rem;
+            color: #333;
+            background: #f8f9fa;
+            padding: 5px 12px;
+            border-radius: 15px;
+            display: inline-block;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+        }
+        .stat-card {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 2px solid #e9ecef;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #e60000;
+            display: block;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .chart-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .chart-section h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 1.5rem;
+        }
+        .plotly-chart { 
+            width: 100%; 
+            min-height: 400px; 
+        }
+        .results-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        }
+        .results-section h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 1.5rem;
+        }
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .results-table th, .results-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .results-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+            color: #333;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 0.5px;
+        }
+        .results-table tbody tr:hover {
+            background: #f8f9fa;
+        }
+        .position {
+            font-weight: bold;
+            padding: 6px 12px;
+            border-radius: 20px;
+            text-align: center;
+            color: white;
+            min-width: 30px;
+            display: inline-block;
+        }
+        .position-1 { background: #ffd700; color: #333; }
+        .position-2 { background: #c0c0c0; color: #333; }
+        .position-3 { background: #cd7f32; color: white; }
+        .position-points { background: #28a745; }
+        .position-no-points { background: #6c757d; }
+        .points {
+            font-weight: bold;
+            color: #e60000;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            border: 1px solid #f5c6cb;
+            text-align: center;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #e60000;
+            text-decoration: none;
+            font-weight: bold;
+            padding: 10px 20px;
+            border: 2px solid #e60000;
+            border-radius: 25px;
+            transition: all 0.3s;
+        }
+        .back-link:hover {
+            background: #e60000;
+            color: white;
+            transform: translateY(-2px);
+        }
+        @media (max-width: 768px) {
+            .driver-header {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .results-table {
+                font-size: 0.9rem;
+            }
+            .results-table th, .results-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+
+    <header>
+        <h1>🏁 F1 Championship Analyzer</h1>
+        <div class="nav-links">
+            <a href="/">Season Overview</a>
+            <a href="/points-progression">Points Progression</a>
+        </div>
+    </header>
+
+    <div class="container">
+        {% if error %}
+            <a href="/" class="back-link">← Back to Season Overview</a>
+            <div class="error">
+                <h3>Data Not Available</h3>
+                <p>{{ error }}</p>
+            </div>
+        {% else %}
+            <a href="/{{ driver.season }}" class="back-link">← Back to {{ driver.season }} Season</a>
+            
+            <div class="driver-header">
+                {% if driver.image_url %}
+                    <img src="{{ driver.image_url }}" alt="{{ driver.name }}" class="driver-photo" 
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="default-avatar" style="display: none;">
+                        {{ driver.name.split()[0][0] }}{{ driver.name.split()[-1][0] }}
+                    </div>
+                {% else %}
+                    <div class="default-avatar">
+                        {{ driver.name.split()[0][0] }}{{ driver.name.split()[-1][0] }}
+                    </div>
+                {% endif %}
+                
+                <div class="driver-info">
+                    <h2>{{ driver.name }}</h2>
+                    <div class="season">{{ driver.season }} Formula 1 Season</div>
+                    <div class="constructor">🏭 {{ driver.constructor }}</div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <span class="stat-number">{{ driver.total_points }}</span>
+                        <span class="stat-label">Points</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">{{ driver.wins }}</span>
+                        <span class="stat-label">Wins</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">{{ driver.podiums }}</span>
+                        <span class="stat-label">Podiums</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number">{{ driver.races_completed }}</span>
+                        <span class="stat-label">Races</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-section">
+                <h3>📈 Points Progression Throughout Season</h3>
+                <div id="plotly-chart" class="plotly-chart"></div>
+            </div>
+
+            <div class="results-section">
+                <h3>🏎️ Race-by-Race Results</h3>
+                <table class="results-table">
+                    <thead>
+                        <tr>
+                            <th>Round</th>
+                            <th>Race</th>
+                            <th>Circuit</th>
+                            <th>Position</th>
+                            <th>Points</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for race in driver.race_results %}
+                        <tr>
+                            <td><strong>{{ race.round }}</strong></td>
+                            <td>{{ race.raceName }}</td>
+                            <td>{{ race.Circuit_circuitName }}</td>
+                            <td>
+                                {% if race.position == 1 %}
+                                    <span class="position position-1">{{ race.position }}</span>
+                                {% elif race.position == 2 %}
+                                    <span class="position position-2">{{ race.position }}</span>
+                                {% elif race.position == 3 %}
+                                    <span class="position position-3">{{ race.position }}</span>
+                                {% elif race.points > 0 %}
+                                    <span class="position position-points">{{ race.position }}</span>
+                                {% else %}
+                                    <span class="position position-no-points">{{ race.position }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="points">
+                                {% if race.points > 0 %}{{ race.points }}{% else %}-{% endif %}
+                            </td>
+                            <td>{{ race.date }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+
+    <script>
+        {% if driver and driver.chart_json %}
+        // Render the points progression chart
+        try {
+            const chartData = {{ driver.chart_json|safe }};
+            if (chartData && chartData.data) {
+                Plotly.newPlot('plotly-chart', chartData.data, chartData.layout, {
+                    responsive: true,
+                    displayModeBar: true,
+                    displaylogo: false,
+                    modeBarButtonsToRemove: ['pan2d', 'lasso2d']
+                });
+            }
+        } catch (e) {
+            console.error("Error rendering chart:", e);
+            document.getElementById('plotly-chart').innerHTML = '<p style="text-align: center; color: #666;">Chart data unavailable</p>';
+        }
+        {% endif %}
+    </script>
+
+</body>
+</html>

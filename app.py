@@ -6,6 +6,9 @@ import plotly.express as px
 import plotly.graph_objects as go
 import plotly.utils
 import json
+import requests
+import re
+from urllib.parse import quote
 
 # Import our custom functions
 try:
@@ -35,6 +38,98 @@ def get_season_data(season):
         print(f"Using cached data for season {season}")
     
     return data_cache[season]
+
+def get_driver_wikipedia_image(driver_name, season):
+    """
+    Fetch driver image from Wikipedia with fallback to default
+    """
+    try:
+        # Clean driver name for Wikipedia search
+        search_name = driver_name.replace(' ', '_')
+        
+        # Try different Wikipedia search strategies
+        search_queries = [
+            f"{search_name}_(racing_driver)",
+            f"{search_name}_(Formula_One)",
+            f"{search_name}",
+            f"{search_name}_(driver)"
+        ]
+        
+        for search_query in search_queries:
+            try:
+                # Wikipedia API to get page info
+                wiki_api = f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(search_query)}"
+                response = requests.get(wiki_api, timeout=5)
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    # Check if we have a thumbnail image
+                    if 'thumbnail' in data and 'source' in data['thumbnail']:
+                        image_url = data['thumbnail']['source']
+                        # Get higher resolution image
+                        if 'originalimage' in data and 'source' in data['originalimage']:
+                            image_url = data['originalimage']['source']
+                        
+                        print(f"Found Wikipedia image for {driver_name}: {image_url}")
+                        return image_url
+                        
+            except Exception as e:
+                print(f"Error searching for {search_query}: {e}")
+                continue
+        
+        print(f"No Wikipedia image found for {driver_name}")
+        return None
+        
+    except Exception as e:
+        print(f"Error fetching image for {driver_name}: {e}")
+        return None
+
+def get_driver_season_details(driver_name, season):
+    """
+    Get detailed race-by-race results for a specific driver in a season
+    """
+    try:
+        df = get_season_data(season)
+        if df.empty:
+            return None
+        
+        # Filter for specific driver
+        driver_data = df[df['Driver'] == driver_name].copy()
+        
+        if driver_data.empty:
+            return None
+        
+        # Sort by round
+        driver_data = driver_data.sort_values('round')
+        
+        # Calculate season statistics
+        total_points = driver_data['points'].sum()
+        wins = len(driver_data[driver_data['position'] == 1])
+        podiums = len(driver_data[driver_data['position'].isin([1, 2, 3])])
+        races_completed = len(driver_data)
+        
+        # Get constructor info (assuming driver didn't change teams mid-season)
+        constructor = driver_data['Constructor_name'].iloc[0]
+        
+        # Get driver image
+        driver_image = get_driver_wikipedia_image(driver_name, season)
+        
+        return {
+            'name': driver_name,
+            'season': season,
+            'constructor': constructor,
+            'total_points': int(total_points),
+            'wins': wins,
+            'podiums': podiums,
+            'races_completed': races_completed,
+            'race_results': driver_data.to_dict('records'),
+            'image_url': driver_image
+        }
+        
+    except Exception as e:
+        print(f"Error getting driver details for {driver_name}: {e}")
+        return None
 
 def get_available_drivers(season):
     """
@@ -146,6 +241,83 @@ def points_progression(season=None):
         races=races,
         drivers=drivers
     )
+
+@app.route('/driver/<driver_name>/<int:season>')
+def driver_detail(driver_name, season):
+    """
+    Display detailed information about a specific driver in a season
+    """
+    try:
+        # Get driver details
+        driver_details = get_driver_season_details(driver_name, season)
+        
+        if not driver_details:
+            return render_template('driver_detail.html', 
+                                 error=f"No data found for {driver_name} in {season} season.")
+        
+        # Create race-by-race points progression chart
+        race_results = driver_details['race_results']
+        if race_results:
+            rounds = [race['round'] for race in race_results]
+            points = [race['points'] for race in race_results]
+            cumulative_points = []
+            total = 0
+            for p in points:
+                total += p
+                cumulative_points.append(total)
+            
+            # Create chart
+            fig = go.Figure()
+            
+            # Add cumulative points line
+            fig.add_trace(go.Scatter(
+                x=rounds,
+                y=cumulative_points,
+                mode='lines+markers',
+                name='Cumulative Points',
+                line=dict(color='#e60000', width=3),
+                marker=dict(size=8, color='#e60000'),
+                hovertemplate='Round %{x}<br>Total Points: %{y}<extra></extra>'
+            ))
+            
+            # Add race points as bars
+            fig.add_trace(go.Bar(
+                x=rounds,
+                y=points,
+                name='Points per Race',
+                opacity=0.6,
+                marker_color='#1e90ff',
+                hovertemplate='Round %{x}<br>Points: %{y}<extra></extra>',
+                yaxis='y2'
+            ))
+            
+            fig.update_layout(
+                title=f'{driver_name} - {season} Season Points Progression',
+                xaxis_title='Race Round',
+                yaxis_title='Cumulative Points',
+                yaxis2=dict(
+                    title='Points per Race',
+                    overlaying='y',
+                    side='right'
+                ),
+                height=400,
+                showlegend=True,
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                hovermode='x unified'
+            )
+            
+            chart_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+            driver_details['chart_json'] = Markup(chart_json)
+        else:
+            driver_details['chart_json'] = Markup("{}")
+        
+        return render_template('driver_detail.html', driver=driver_details)
+        
+    except Exception as e:
+        print(f"Error in driver detail route: {e}")
+        return render_template('driver_detail.html', 
+                             error=f"Error loading data for {driver_name}.")
 
 @app.route('/api/points-progression')
 def points_progression_api():
@@ -274,6 +446,23 @@ def points_progression_api():
         import traceback
         traceback.print_exc()
         return jsonify({'error': f'Server error: {str(e)}'}), 500
+
+@app.route('/api/driver-image/<driver_name>/<int:season>')
+def get_driver_image_api(driver_name, season):
+    """
+    API endpoint to get driver image (for AJAX loading)
+    """
+    try:
+        image_url = get_driver_wikipedia_image(driver_name, season)
+        return jsonify({
+            'image_url': image_url,
+            'driver_name': driver_name
+        })
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'driver_name': driver_name
+        })
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

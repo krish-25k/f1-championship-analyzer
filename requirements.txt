@@ -5,3 +5,4 @@ plotly
 lxml
 beautifulsoup4
 markupsafe
+urllib3
