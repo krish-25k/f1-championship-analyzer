@@ -8,8 +8,9 @@
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             margin: 0; 
-            background-color: #f8f9fa; 
+            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80') center/cover fixed;
             color: #212529; 
+            min-height: 100vh;
         }
         header { 
             background: linear-gradient(135deg, #e60000, #ff4444);
@@ -43,10 +44,11 @@
             padding: 0 20px; 
         }
         .controls { 
-            background-color: white; 
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(8px); 
             padding: 25px; 
             border-radius: 12px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15); 
             margin-bottom: 25px; 
         }
         .control-group {
@@ -79,13 +81,13 @@
             display: flex;
             align-items: center;
             padding: 8px;
-            background: #f8f9fa;
+            background: rgba(248, 249, 250, 0.8);
             border-radius: 6px;
             border: 1px solid #ddd;
             transition: background 0.2s;
         }
         .driver-checkbox:hover {
-            background: #e9ecef;
+            background: rgba(233, 236, 239, 0.8);
         }
         .driver-checkbox input {
             margin-right: 8px;
@@ -129,10 +131,11 @@
             box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
         }
         .chart-container { 
-            background-color: white; 
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(8px); 
             padding: 25px; 
             border-radius: 12px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15); 
             margin-bottom: 25px;
         }
         .plotly-chart { 
@@ -143,23 +146,48 @@
             text-align: center;
             padding: 40px;
             font-size: 1.2rem;
-            color: #666;
+            color: white;
+            background: rgba(0,0,0,0.5);
+            border-radius: 12px;
+            margin: 20px 0;
         }
         .error {
-            background: #f8d7da;
+            background: rgba(248, 215, 218, 0.85);
             color: #721c24;
             padding: 15px;
             border-radius: 8px;
             margin: 20px 0;
             border: 1px solid #f5c6cb;
+            backdrop-filter: blur(8px);
         }
         .info {
-            background: #d4edda;
+            background: rgba(212, 237, 218, 0.85);
             color: #155724;
             padding: 15px;
             border-radius: 8px;
             margin: 20px 0;
             border: 1px solid #c3e6cb;
+            backdrop-filter: blur(8px);
+        }
+        .footer {
+            background: rgba(33, 37, 41, 0.95);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+            backdrop-filter: blur(10px);
+        }
+        .footer p {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        .footer a {
+            color: #ff4444;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .footer a:hover {
+            color: #ff6666;
         }
         @media (max-width: 768px) {
             .drivers-grid {
@@ -187,71 +215,84 @@
     </header>
 
     <div class="container">
-        <div class="controls">
-            <div class="control-group">
-                <label for="season">Season:</label>
-                <select id="season" name="season">
-                    {% for year in seasons %}
-                        <option value="{{ year }}" {% if year == selected_season %}selected{% endif %}>{{ year }}</option>
-                    {% endfor %}
-                </select>
+        {% if error %}
+            <div class="error">
+                <h3>Data Not Available</h3>
+                <p>{{ error }}</p>
             </div>
+        {% else %}
+            <div class="controls">
+                <div class="control-group">
+                    <label for="season">Season:</label>
+                    <select id="season" name="season">
+                        {% for year in seasons %}
+                            <option value="{{ year }}" {% if year == selected_season %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-            <div class="control-group">
-                <label for="up-to-round">Show up to Round (optional):</label>
-                <select id="up-to-round" name="up-to-round">
-                    <option value="">All rounds</option>
-                    {% for race in races %}
-                        <option value="{{ race.round }}">Up to Round {{ race.round }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+                <div class="control-group">
+                    <label for="up-to-round">Show up to Round (optional):</label>
+                    <select id="up-to-round" name="up-to-round">
+                        <option value="">All rounds</option>
+                        {% for race in races %}
+                            <option value="{{ race.round }}">Up to Round {{ race.round }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
 
-            <div class="control-group">
-                <label>Select Drivers (max 10):</label>
-                <div class="drivers-grid" id="drivers-grid">
-                    {% for driver in drivers %}
-                        <div class="driver-checkbox">
-                            <input type="checkbox" id="driver-{{ loop.index }}" name="drivers" value="{{ driver.name }}">
-                            <label for="driver-{{ loop.index }}">{{ driver.name }} ({{ driver.points }} pts)</label>
-                        </div>
-                    {% endfor %}
+                <div class="control-group">
+                    <label>Select Drivers (max 10):</label>
+                    <div class="drivers-grid" id="drivers-grid">
+                        {% for driver in drivers %}
+                            <div class="driver-checkbox">
+                                <input type="checkbox" id="driver-{{ loop.index }}" name="drivers" value="{{ driver.name }}">
+                                <label for="driver-{{ loop.index }}">{{ driver.name }} ({{ driver.points }} pts)</label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn" id="load-progression" onclick="loadProgression()">
+                        Load Points Progression
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearSelection()">
+                        Clear Selection
+                    </button>
                 </div>
             </div>
 
-            <div class="action-buttons">
-                <button class="btn" id="load-progression" onclick="loadProgression()">
-                    Load Points Progression
-                </button>
-                <button class="btn btn-secondary" onclick="clearSelection()">
-                    Clear Selection
-                </button>
+            <div id="info-message" class="info">
+                Select a season and drivers above to see how their championship points accumulated throughout the season. You can compare up to 10 drivers at once.
             </div>
-        </div>
 
-        <div id="info-message" class="info" style="display: none;">
-            Select a season and drivers to see how their championship points accumulated throughout the season.
-        </div>
+            <div id="error-message" class="error" style="display: none;"></div>
 
-        <div id="error-message" class="error" style="display: none;"></div>
+            <div id="chart-container" class="chart-container" style="display: none;">
+                <div id="plotly-chart" class="plotly-chart"></div>
+            </div>
 
-        <div id="chart-container" class="chart-container" style="display: none;">
-            <div id="plotly-chart" class="plotly-chart"></div>
-        </div>
-
-        <div id="loading" class="loading" style="display: none;">
-            <div>📊 Loading points progression data...</div>
-            <div style="margin-top: 10px; font-size: 0.9rem;">Analyzing championship battle</div>
-        </div>
+            <div id="loading" class="loading" style="display: none;">
+                <div>📊 Loading points progression data...</div>
+                <div style="margin-top: 10px; font-size: 0.9rem;">Analyzing championship battle</div>
+            </div>
+        {% endif %}
     </div>
 
+    <footer class="footer">
+        <p>Created by <a href="https://github.com/krish-25k" target="_blank">krish-25k</a></p>
+    </footer>
+
     <script>
-        // Show initial info message
-        document.getElementById('info-message').style.display = 'block';
+        console.log('Points progression page loaded');
+        console.log('Drivers available:', {{ drivers|length if drivers else 0 }});
+        console.log('Races available:', {{ races|length if races else 0 }});
 
         // Handle season change
         document.getElementById('season').addEventListener('change', function() {
             const selectedSeason = this.value;
+            console.log('Changing to season:', selectedSeason);
             window.location.href = '/points-progression/' + selectedSeason;
         });
 
@@ -274,10 +315,15 @@
         });
 
         function loadProgression() {
+            console.log('Loading progression...');
             const season = document.getElementById('season').value;
             const checkedBoxes = document.querySelectorAll('input[name="drivers"]:checked');
             const selectedDrivers = Array.from(checkedBoxes).map(cb => cb.value);
             const upToRound = document.getElementById('up-to-round').value;
+
+            console.log('Season:', season);
+            console.log('Selected drivers:', selectedDrivers);
+            console.log('Up to round:', upToRound);
 
             if (selectedDrivers.length === 0) {
                 showError('Please select at least one driver.');
@@ -297,35 +343,51 @@
                 params.append('up_to_round', upToRound);
             }
 
+            const url = `/api/points-progression?${params}`;
+            console.log('Fetching from URL:', url);
+
             // Fetch data
-            fetch(`/api/points-progression?${params}`)
+            fetch(url)
                 .then(response => {
+                    console.log('Response status:', response.status);
                     if (!response.ok) {
-                        return response.json().then(err => Promise.reject(err));
+                        return response.json().then(err => {
+                            console.error('API Error:', err);
+                            Promise.reject(err);
+                        });
                     }
                     return response.json();
                 })
                 .then(data => {
+                    console.log('Data received:', data);
                     showLoading(false);
                     displayChart(data);
                 })
                 .catch(error => {
+                    console.error('Fetch error:', error);
                     showLoading(false);
-                    showError(error.error || 'Failed to load points progression data.');
+                    showError(error.error || 'Failed to load points progression data. Check console for details.');
                 });
         }
 
         function displayChart(data) {
-            const chartData = JSON.parse(data.chart);
-            
-            Plotly.newPlot('plotly-chart', chartData.data, chartData.layout, {
-                responsive: true,
-                displayModeBar: true,
-                displaylogo: false,
-                modeBarButtonsToRemove: ['pan2d', 'lasso2d']
-            });
-            
-            document.getElementById('chart-container').style.display = 'block';
+            try {
+                console.log('Displaying chart with data:', data);
+                const chartData = JSON.parse(data.chart);
+                
+                Plotly.newPlot('plotly-chart', chartData.data, chartData.layout, {
+                    responsive: true,
+                    displayModeBar: true,
+                    displaylogo: false,
+                    modeBarButtonsToRemove: ['pan2d', 'lasso2d']
+                });
+                
+                document.getElementById('chart-container').style.display = 'block';
+                console.log('Chart displayed successfully');
+            } catch (error) {
+                console.error('Error displaying chart:', error);
+                showError('Failed to display chart. Check console for details.');
+            }
         }
 
         function clearSelection() {
@@ -346,6 +408,7 @@
             const errorDiv = document.getElementById('error-message');
             errorDiv.textContent = message;
             errorDiv.style.display = 'block';
+            console.error('Showing error:', message);
         }
 
         function hideError() {
@@ -358,6 +421,7 @@
 
         // Initial button state
         document.getElementById('load-progression').disabled = true;
+        console.log('Initial setup complete');
     </script>
 
 </body>

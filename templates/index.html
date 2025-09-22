@@ -5,9 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Race Analyzer</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; background-color: #f8f9fa; color: #212529; }
-        header { background-color: #e60000; color: white; padding: 20px 40px; text-align: center; }
-        header h1 { margin: 0; font-size: 2.5rem; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            margin: 0; 
+            background: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.4)), url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80') center/cover fixed;
+            color: #212529; 
+            min-height: 100vh;
+        }
+        header { 
+            background: linear-gradient(135deg, #e60000, #ff4444);
+            color: white; 
+            padding: 20px 40px; 
+            text-align: center; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        header h1 { 
+            margin: 0; 
+            font-size: 2.5rem; 
+        }
         .nav-links {
             margin-top: 15px;
         }
@@ -18,10 +33,11 @@
             padding: 8px 16px;
             border-radius: 20px;
             background: rgba(255,255,255,0.2);
-            transition: background 0.3s;
+            transition: all 0.3s;
         }
         .nav-links a:hover {
             background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
         }
         .driver-link {
             color: #e60000;
@@ -33,26 +49,109 @@
             color: #ff4444;
             text-decoration: underline;
         }
-        .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
-        .filters { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; text-align: center; }
-        .filters label { font-weight: bold; margin-right: 10px; }
-        .filters select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 1rem; }
-        .filters button { padding: 8px 15px; background-color: #1e90ff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 1rem; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .card { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .card h2 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: 8px; border-bottom: 1px solid #ddd; }
-        th { background-color: #f2f2f2; }
-        .plotly-chart { width: 100%; min-height: 500px; }
-        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+        .container { 
+            max-width: 1400px; 
+            margin: 20px auto; 
+            padding: 0 20px; 
+        }
+        .filters { 
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(8px); 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15); 
+            margin-bottom: 20px; 
+            text-align: center; 
+        }
+        .filters label { 
+            font-weight: bold; 
+            margin-right: 10px; 
+        }
+        .filters select { 
+            padding: 8px; 
+            border-radius: 4px; 
+            border: 1px solid #ccc; 
+            font-size: 1rem; 
+        }
+        .filters button { 
+            padding: 8px 15px; 
+            background: linear-gradient(135deg, #1e90ff, #0066cc); 
+            color: white; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            font-size: 1rem; 
+            transition: all 0.3s;
+        }
+        .filters button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(30, 144, 255, 0.3);
+        }
+        .grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 20px; 
+        }
+        .card { 
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(8px); 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15); 
+        }
+        .card h2 { 
+            margin-top: 0; 
+            border-bottom: 2px solid #eee; 
+            padding-bottom: 10px; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+        }
+        th, td { 
+            text-align: left; 
+            padding: 8px; 
+            border-bottom: 1px solid #ddd; 
+        }
+        th { 
+            background-color: #f2f2f2; 
+        }
+        .plotly-chart { 
+            width: 100%; 
+            min-height: 500px; 
+        }
+        .footer {
+            background: rgba(33, 37, 41, 0.95);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+            backdrop-filter: blur(10px);
+        }
+        .footer p {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        .footer a {
+            color: #ff4444;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .footer a:hover {
+            color: #ff6666;
+        }
+        @media (max-width: 900px) { 
+            .grid { 
+                grid-template-columns: 1fr; 
+            } 
+        }
     </style>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
 
     <header>
-        <h1>🏁 F1 Race Analyzer</h1>
+        <h1>F1 Race Analyzer</h1>
         <div class="nav-links">
             <a href="/">Season Overview</a>
             <a href="/points-progression">Points Progression</a>
@@ -80,7 +179,7 @@
         {% else %}
             <div class="grid">
                 <div class="card">
-                    <h2>Driver Standings 🏎️</h2>
+                    <h2>Driver Standings</h2>
                     {% if driver_table %}
                         <div id="driver-table-container">{{ driver_table|safe }}</div>
                     {% else %}
@@ -88,7 +187,7 @@
                     {% endif %}
                 </div>
                 <div class="card">
-                    <h2>Constructor Standings 🏭</h2>
+                    <h2>Constructor Standings</h2>
                     {% if constructor_table %}
                         {{ constructor_table|safe }}
                     {% else %}
@@ -98,6 +197,10 @@
             </div>
         {% endif %}
     </div>
+
+    <footer class="footer">
+        <p>Created by <a href="https://github.com/krish-25k" target="_blank">krish-25k</a></p>
+    </footer>
 
     <script>
         document.getElementById('seasonForm').addEventListener('submit', function(event) {

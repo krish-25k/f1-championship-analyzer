@@ -8,7 +8,7 @@
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             margin: 0; 
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1558618666-fcd25c85cd64?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80') center/cover fixed;
             color: #212529; 
             min-height: 100vh;
         }
@@ -45,11 +45,12 @@
             padding: 0 20px; 
         }
         .driver-header {
-            background: white;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(8px);
             border-radius: 15px;
             padding: 30px;
             margin-bottom: 25px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
             display: grid;
             grid-template-columns: auto 1fr auto;
             gap: 25px;
@@ -90,10 +91,84 @@
         .driver-info .constructor {
             font-size: 1.1rem;
             color: #333;
-            background: #f8f9fa;
+            background: #e9f5ff;
             padding: 5px 12px;
             border-radius: 15px;
             display: inline-block;
+        }
+        .driver-info .nationality {
+            font-size: 1.1rem;
+            color: #333;
+            background: #e9f5ff;
+            padding: 5px 12px;
+            border-radius: 15px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .bio-section {
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(8px);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .bio-section h3 {
+            margin: 0 0 20px 0;
+            color: #e60000;
+            font-size: 1.5rem;
+        }
+        .bio-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+        }
+        .bio-description {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 20px;
+        }
+        .bio-details {
+            display: grid;
+            gap: 10px;
+        }
+        .bio-detail {
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .bio-detail strong {
+            color: #e60000;
+            margin-right: 8px;
+        }
+        .team-badge {
+            background: #f8f9fa;
+            padding: 4px 10px;
+            margin: 2px 4px 2px 0;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            color: #555;
+            border: 1px solid #e9ecef;
+            display: inline-block;
+        }
+        .bio-highlights h4 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 1.2rem;
+        }
+        .highlights-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .highlights-list li {
+            background: #f8f9fa;
+            margin: 8px 0;
+            padding: 12px 16px;
+            border-left: 4px solid #e60000;
+            border-radius: 0 8px 8px 0;
+            font-weight: 500;
+            color: #333;
         }
         .stats-grid {
             display: grid;
@@ -103,7 +178,8 @@
         .stat-card {
             text-align: center;
             padding: 15px;
-            background: #f8f9fa;
+            background: rgba(248,249,250,0.8);
+            backdrop-filter: blur(5px);
             border-radius: 12px;
             border: 2px solid #e9ecef;
         }
@@ -120,11 +196,12 @@
             letter-spacing: 0.5px;
         }
         .chart-section {
-            background: white;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(8px);
             border-radius: 15px;
             padding: 25px;
             margin-bottom: 25px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
         }
         .chart-section h3 {
             margin: 0 0 20px 0;
@@ -136,10 +213,11 @@
             min-height: 400px; 
         }
         .results-section {
-            background: white;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(8px);
             border-radius: 15px;
             padding: 25px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
         }
         .results-section h3 {
             margin: 0 0 20px 0;
@@ -165,7 +243,7 @@
             letter-spacing: 0.5px;
         }
         .results-table tbody tr:hover {
-            background: #f8f9fa;
+            background: rgba(248,249,250,0.5);
         }
         .position {
             font-weight: bold;
@@ -186,29 +264,52 @@
             color: #e60000;
         }
         .error {
-            background: #f8d7da;
+            background: rgba(248, 215, 218, 0.9);
             color: #721c24;
             padding: 20px;
             border-radius: 12px;
             margin: 20px 0;
             border: 1px solid #f5c6cb;
             text-align: center;
+            backdrop-filter: blur(10px);
         }
         .back-link {
             display: inline-block;
             margin-bottom: 20px;
-            color: #e60000;
+            color: white;
+            background: rgba(230, 0, 0, 0.9);
             text-decoration: none;
             font-weight: bold;
             padding: 10px 20px;
             border: 2px solid #e60000;
             border-radius: 25px;
             transition: all 0.3s;
+            backdrop-filter: blur(10px);
         }
         .back-link:hover {
             background: #e60000;
-            color: white;
             transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(230, 0, 0, 0.4);
+        }
+        .footer {
+            background: rgba(33, 37, 41, 0.95);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+            backdrop-filter: blur(10px);
+        }
+        .footer p {
+            margin: 0;
+            font-size: 1.1rem;
+        }
+        .footer a {
+            color: #ff4444;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .footer a:hover {
+            color: #ff6666;
         }
         @media (max-width: 768px) {
             .driver-header {
@@ -217,6 +318,10 @@
             }
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
+            }
+            .bio-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
             }
             .results-table {
                 font-size: 0.9rem;
@@ -231,7 +336,7 @@
 <body>
 
     <header>
-        <h1>🏁 F1 Championship Analyzer</h1>
+        <h1>🏎️ F1 Championship Analyzer</h1>
         <div class="nav-links">
             <a href="/">Season Overview</a>
             <a href="/points-progression">Points Progression</a>
@@ -265,6 +370,9 @@
                     <h2>{{ driver.name }}</h2>
                     <div class="season">{{ driver.season }} Formula 1 Season</div>
                     <div class="constructor">🏭 {{ driver.constructor }}</div>
+                    {% if driver.bio and driver.bio.nationality and driver.bio.nationality != 'See bio' and driver.bio.nationality != 'Unknown' %}
+                        <div class="nationality">🏁 {{ driver.bio.nationality }}</div>
+                    {% endif %}
                 </div>
                 
                 <div class="stats-grid">
@@ -287,10 +395,66 @@
                 </div>
             </div>
 
+            <!-- Enhanced Driver Bio Section -->
+            <div class="bio-section">
+                <h3>🏎️ About {{ driver.name }}</h3>
+                <div class="bio-grid">
+                    <div class="bio-main">
+                        {% if driver.bio and driver.bio.description %}
+                            <p class="bio-description">{{ driver.bio.description }}</p>
+                        {% else %}
+                            <p class="bio-description">Biography information not available.</p>
+                        {% endif %}
+                        
+                        <div class="bio-details">
+                            {% if driver.bio and driver.bio.nationality and driver.bio.nationality != 'See bio' and driver.bio.nationality != 'Unknown' %}
+                            <div class="bio-detail">
+                                <strong>🏁 Nationality:</strong> {{ driver.bio.nationality }}
+                            </div>
+                            {% endif %}
+                            
+                            {% if driver.bio and driver.bio.birthdate and driver.bio.birthdate != 'See bio' and driver.bio.birthdate != 'Unknown' %}
+                            <div class="bio-detail">
+                                <strong>🎂 Born:</strong> {{ driver.bio.birthdate }}
+                            </div>
+                            {% endif %}
+                            
+                            {% if driver.bio and driver.bio.career_start %}
+                            <div class="bio-detail">
+                                <strong>🏎️ F1 Debut:</strong> {{ driver.bio.career_start }}
+                            </div>
+                            {% endif %}
+                            
+                            {% if driver.bio and driver.bio.teams %}
+                            <div class="bio-detail">
+                                <strong>🏭 Teams:</strong> 
+                                {% for team in driver.bio.teams %}
+                                    <span class="team-badge">{{ team }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    {% if driver.bio and driver.bio.career_highlights %}
+                    <div class="bio-highlights">
+                        <h4>🏆 Career Highlights</h4>
+                        <ul class="highlights-list">
+                            {% for highlight in driver.bio.career_highlights %}
+                            <li>{{ highlight }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if driver.chart_json %}
             <div class="chart-section">
                 <h3>📈 Points Progression Throughout Season</h3>
                 <div id="plotly-chart" class="plotly-chart"></div>
             </div>
+            {% endif %}
 
             <div class="results-section">
                 <h3>🏎️ Race-by-Race Results</h3>
@@ -309,7 +473,12 @@
                         {% for race in driver.race_results %}
                         <tr>
                             <td><strong>{{ race.round }}</strong></td>
-                            <td>{{ race.raceName }}</td>
+                            <td>
+                                {{ race.raceName }}
+                                {% if race.race_type == 'Sprint' %}
+                                    <span class="race-type-badge sprint">SPRINT</span>
+                                {% endif %}
+                            </td>
                             <td>{{ race.Circuit_circuitName }}</td>
                             <td>
                                 {% if race.position == 1 %}
@@ -335,6 +504,10 @@
             </div>
         {% endif %}
     </div>
+
+    <footer class="footer">
+        <p>Created by <a href="https://github.com/krish-25k" target="_blank">krish-25k</a></p>
+    </footer>
 
     <script>
         {% if driver and driver.chart_json %}

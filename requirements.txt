@@ -6,3 +6,4 @@ lxml
 beautifulsoup4
 markupsafe
 urllib3
+wikipedia

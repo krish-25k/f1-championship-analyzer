@@ -1,468 +1,428 @@
 from markupsafe import Markup
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify
 import pandas as pd
 import datetime
-import plotly.express as px
 import plotly.graph_objects as go
 import plotly.utils
 import json
 import requests
-import re
-from urllib.parse import quote
+import wikipedia
 
-# Import our custom functions
-try:
-    from src.data import fetch_race_results_with_retry
-    from src.analysis import driver_stats, constructor_stats, cumulative_points
-except ImportError:
-    # Fallback for direct import
-    from data import fetch_race_results_with_retry
-    from analysis import driver_stats, constructor_stats, cumulative_points
+# Import custom functions
+from src.data import fetch_race_results_with_retry
+from src.analysis import driver_stats, constructor_stats, cumulative_points
 
 # Initialize the Flask application
 app = Flask(__name__)
-app.secret_key = 'f1_analyzer_secret_key'  # For session management
+app.secret_key = 'f1_analyzer_secret_key'
 
-# Cache for storing data to avoid repeated API calls
+# Cache for storing data
 data_cache = {}
 
 def get_season_data(season):
-    """
-    Get season data with caching to improve performance
-    """
+    """Get season data with caching."""
     if season not in data_cache:
-        print(f"Fetching fresh data for season {season}")
+        print(f"Fetching data for season {season}")
         df = fetch_race_results_with_retry(season)
         data_cache[season] = df
     else:
         print(f"Using cached data for season {season}")
-    
     return data_cache[season]
 
-def get_driver_wikipedia_image(driver_name, season):
-    """
-    Fetch driver image from Wikipedia with fallback to default
-    """
+def get_driver_details_from_wikipedia(driver_name):
+    """Fetch driver photo and biography from Wikipedia with better image selection."""
     try:
-        # Clean driver name for Wikipedia search
-        search_name = driver_name.replace(' ', '_')
+        # Use a targeted search to find the correct page
+        search_results = wikipedia.search(f"{driver_name} Formula 1 driver")
+        if not search_results:
+            search_results = wikipedia.search(f"{driver_name} racing driver")
+        if not search_results:
+            search_results = wikipedia.search(driver_name)
         
-        # Try different Wikipedia search strategies
-        search_queries = [
-            f"{search_name}_(racing_driver)",
-            f"{search_name}_(Formula_One)",
-            f"{search_name}",
-            f"{search_name}_(driver)"
-        ]
+        if not search_results:
+            return None, None
         
-        for search_query in search_queries:
-            try:
-                # Wikipedia API to get page info
-                wiki_api = f"https://en.wikipedia.org/api/rest_v1/page/summary/{quote(search_query)}"
-                response = requests.get(wiki_api, timeout=5)
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    
-                    # Check if we have a thumbnail image
-                    if 'thumbnail' in data and 'source' in data['thumbnail']:
-                        image_url = data['thumbnail']['source']
-                        # Get higher resolution image
-                        if 'originalimage' in data and 'source' in data['originalimage']:
-                            image_url = data['originalimage']['source']
-                        
-                        print(f"Found Wikipedia image for {driver_name}: {image_url}")
-                        return image_url
-                        
-            except Exception as e:
-                print(f"Error searching for {search_query}: {e}")
-                continue
+        page = wikipedia.page(search_results[0], auto_suggest=False)
         
-        print(f"No Wikipedia image found for {driver_name}")
-        return None
+        # Get a better image URL and summary
+        image_url = find_best_driver_image(page.images, driver_name)
+        summary = page.summary
         
+        return image_url, summary
+        
+    except (wikipedia.exceptions.PageError, wikipedia.exceptions.DisambiguationError) as e:
+        print(f"Wikipedia search failed for {driver_name}: {e}")
+        return None, f"Could not find a definitive biography for {driver_name}."
     except Exception as e:
-        print(f"Error fetching image for {driver_name}: {e}")
+        print(f"An unexpected error occurred while fetching from Wikipedia: {e}")
+        return None, "An error occurred while fetching the driver's biography."
+
+def find_best_driver_image(image_urls, driver_name):
+    """Find the best driver image from Wikipedia images."""
+    if not image_urls:
         return None
+    
+    # Keywords that suggest a driver photo
+    good_keywords = ['portrait', 'headshot', 'driver', 'racing', 'formula', 'f1', 'head', 'face']
+    # Keywords that suggest non-driver photos
+    bad_keywords = ['car', 'logo', 'track', 'circuit', 'garage', 'pit', 'helmet', 'trophy', 'flag', 'map']
+    
+    # Score images based on filename
+    scored_images = []
+    
+    for img_url in image_urls:
+        if not img_url:
+            continue
+            
+        # Extract filename from URL
+        filename = img_url.lower().split('/')[-1] if '/' in img_url else img_url.lower()
+        
+        score = 0
+        
+        # Prefer JPG/JPEG images (usually photos)
+        if any(ext in filename for ext in ['.jpg', '.jpeg']):
+            score += 10
+        
+        # Avoid SVG files (usually logos/graphics)
+        if '.svg' in filename:
+            score -= 20
+        
+        # Check for driver name in filename
+        name_parts = driver_name.lower().split()
+        for part in name_parts:
+            if part in filename:
+                score += 15
+        
+        # Check for good keywords
+        for keyword in good_keywords:
+            if keyword in filename:
+                score += 5
+        
+        # Check for bad keywords
+        for keyword in bad_keywords:
+            if keyword in filename:
+                score -= 10
+        
+        # Prefer images that are not too small (based on common naming patterns)
+        if any(size in filename for size in ['thumb', '150px', '200px']):
+            score -= 5
+        
+        scored_images.append((score, img_url))
+    
+    # Sort by score (highest first) and return the best one
+    scored_images.sort(reverse=True, key=lambda x: x[0])
+    
+    if scored_images and scored_images[0][0] > -10:  # Only return if score is reasonable
+        return scored_images[0][1]
+    
+    # Fallback: return first JPG/JPEG image if available
+    for img_url in image_urls:
+        if img_url and any(ext in img_url.lower() for ext in ['.jpg', '.jpeg']):
+            return img_url
+    
+    # Last resort: return first image
+    return image_urls[0] if image_urls else None
 
 def get_driver_season_details(driver_name, season):
-    """
-    Get detailed race-by-race results for a specific driver in a season
-    """
-    try:
-        df = get_season_data(season)
-        if df.empty:
-            return None
-        
-        # Filter for specific driver
-        driver_data = df[df['Driver'] == driver_name].copy()
-        
-        if driver_data.empty:
-            return None
-        
-        # Sort by round
-        driver_data = driver_data.sort_values('round')
-        
-        # Calculate season statistics
-        total_points = driver_data['points'].sum()
-        wins = len(driver_data[driver_data['position'] == 1])
-        podiums = len(driver_data[driver_data['position'].isin([1, 2, 3])])
-        races_completed = len(driver_data)
-        
-        # Get constructor info (assuming driver didn't change teams mid-season)
-        constructor = driver_data['Constructor_name'].iloc[0]
-        
-        # Get driver image
-        driver_image = get_driver_wikipedia_image(driver_name, season)
-        
-        return {
-            'name': driver_name,
-            'season': season,
-            'constructor': constructor,
-            'total_points': int(total_points),
-            'wins': wins,
-            'podiums': podiums,
-            'races_completed': races_completed,
-            'race_results': driver_data.to_dict('records'),
-            'image_url': driver_image
-        }
-        
-    except Exception as e:
-        print(f"Error getting driver details for {driver_name}: {e}")
+    """Get detailed results and bio for a driver in a season."""
+    df = get_season_data(season)
+    if df.empty:
         return None
+    
+    driver_data = df[df['Driver'] == driver_name].copy()
+    if driver_data.empty:
+        return None
+    
+    # Sort by round to ensure proper order
+    driver_data = driver_data.sort_values('round')
+    
+    # Get driver bio and photo from Wikipedia
+    image_url, bio_description = get_driver_details_from_wikipedia(driver_name)
 
-def get_available_drivers(season):
-    """
-    Gets all available drivers for a season with their total points
-    """
-    try:
-        df = get_season_data(season)
-        if df.empty:
-            return []
-        
-        # Get driver stats to show total points
-        driver_df = driver_stats(df)
-        drivers_with_points = []
-        
-        for driver_name in driver_df.index:
-            total_points = int(driver_df.loc[driver_name, 'Total_Points'])
-            drivers_with_points.append({
-                'name': driver_name,
-                'points': total_points
-            })
-        
-        # Sort by points descending
-        drivers_with_points.sort(key=lambda x: x['points'], reverse=True)
-        return drivers_with_points
-        
-    except Exception as e:
-        print(f"Error getting drivers: {e}")
-        return []
-
-def get_race_list_with_details(season):
-    """
-    Gets race list with additional details from the results data
-    """
-    try:
-        df = get_season_data(season)
-        if df.empty:
-            return []
-        
-        races = []
-        for round_num, race_data in df.groupby('round'):
-            race_info = race_data.iloc[0]
-            races.append({
-                'round': int(round_num),
-                'raceName': race_info['raceName'],
-                'date': race_info.get('date', 'Unknown'),
-                'circuit': race_info.get('Circuit_circuitName', 'Unknown')
-            })
-        
-        return sorted(races, key=lambda x: x['round'])
-        
-    except Exception as e:
-        print(f"Error getting race list: {e}")
-        return []
-
+    # Basic stats
+    total_points = driver_data['points'].sum()
+    wins = (driver_data['position'] == 1).sum()
+    podiums = driver_data['position'].isin([1, 2, 3]).sum()
+    
+    return {
+        'name': driver_name,
+        'season': season,
+        'constructor': driver_data['Constructor_name'].iloc[0],
+        'total_points': int(total_points),
+        'wins': int(wins),
+        'podiums': int(podiums),
+        'races_completed': len(driver_data),
+        'race_results': driver_data.to_dict('records'),
+        'image_url': image_url,
+        'bio': {
+            'description': bio_description,
+            'nationality': "See bio",
+            'birthdate': "See bio",
+            'career_highlights': [],
+            'teams': []
+        }
+    }
+    
 @app.route('/')
 @app.route('/<int:season>')
 def index(season=None):
     current_year = datetime.datetime.now().year
-    if season is None:
-        season = current_year
-    
-    # Create a list of years for the dropdown (1950 to current year)
+    season = season or current_year
     seasons = list(range(current_year, 1949, -1))
-
-    # Fetch Data with caching
-    print(f"Loading season overview for: {season}")
+    
     df = get_season_data(season)
-
-    # Handle Cases with No Data
     if df.empty:
-        error_message = f"No data available for the {season} season. Please select another year."
-        print(error_message)
-        return render_template('index.html', error=error_message, seasons=seasons, 
-                              selected_season=season,
-                              driver_table="", constructor_table="")
+        return render_template('index.html', error=f"No data for {season}.", seasons=seasons, selected_season=season)
 
-    # Perform Analysis
-    driver_df = driver_stats(df)
-    constructor_df = constructor_stats(df)
-
-    # Prepare Data for Display (just tables, no chart on main page)
-    driver_table = driver_df.to_html(classes='table table-striped', index=True)
-    constructor_table = constructor_df.to_html(classes='table table-striped', index=True)
-
-    # Render the Final Page (removed cumulative chart)
-    return render_template(
-        'index.html',
-        selected_season=season,
-        seasons=seasons,
-        driver_table=driver_table,
-        constructor_table=constructor_table
-    )
+    driver_table = driver_stats(df).to_html(classes='table table-striped')
+    constructor_table = constructor_stats(df).to_html(classes='table table-striped')
+    
+    return render_template('index.html',
+                           selected_season=season,
+                           seasons=seasons,
+                           driver_table=driver_table,
+                           constructor_table=constructor_table)
 
 @app.route('/points-progression')
 @app.route('/points-progression/<int:season>')
 def points_progression(season=None):
+    """Points progression analysis page."""
     current_year = datetime.datetime.now().year
-    if season is None:
-        season = current_year
+    season = season or current_year
+    seasons = list(range(current_year, 1949, -1))
     
-    seasons = list(range(current_year, 1949, -1))  # All seasons available
-    races = get_race_list_with_details(season)
-    drivers = get_available_drivers(season)
+    df = get_season_data(season)
+    if df.empty:
+        return render_template('points_progression.html', 
+                             error=f"No data for {season}.", 
+                             seasons=seasons, 
+                             selected_season=season,
+                             drivers=[],
+                             races=[])
     
-    return render_template(
-        'points_progression.html',
-        selected_season=season,
-        seasons=seasons,
-        races=races,
-        drivers=drivers
-    )
-
-@app.route('/driver/<driver_name>/<int:season>')
-def driver_detail(driver_name, season):
-    """
-    Display detailed information about a specific driver in a season
-    """
-    try:
-        # Get driver details
-        driver_details = get_driver_season_details(driver_name, season)
-        
-        if not driver_details:
-            return render_template('driver_detail.html', 
-                                 error=f"No data found for {driver_name} in {season} season.")
-        
-        # Create race-by-race points progression chart
-        race_results = driver_details['race_results']
-        if race_results:
-            rounds = [race['round'] for race in race_results]
-            points = [race['points'] for race in race_results]
-            cumulative_points = []
-            total = 0
-            for p in points:
-                total += p
-                cumulative_points.append(total)
-            
-            # Create chart
-            fig = go.Figure()
-            
-            # Add cumulative points line
-            fig.add_trace(go.Scatter(
-                x=rounds,
-                y=cumulative_points,
-                mode='lines+markers',
-                name='Cumulative Points',
-                line=dict(color='#e60000', width=3),
-                marker=dict(size=8, color='#e60000'),
-                hovertemplate='Round %{x}<br>Total Points: %{y}<extra></extra>'
-            ))
-            
-            # Add race points as bars
-            fig.add_trace(go.Bar(
-                x=rounds,
-                y=points,
-                name='Points per Race',
-                opacity=0.6,
-                marker_color='#1e90ff',
-                hovertemplate='Round %{x}<br>Points: %{y}<extra></extra>',
-                yaxis='y2'
-            ))
-            
-            fig.update_layout(
-                title=f'{driver_name} - {season} Season Points Progression',
-                xaxis_title='Race Round',
-                yaxis_title='Cumulative Points',
-                yaxis2=dict(
-                    title='Points per Race',
-                    overlaying='y',
-                    side='right'
-                ),
-                height=400,
-                showlegend=True,
-                plot_bgcolor='white',
-                paper_bgcolor='white',
-                hovermode='x unified'
-            )
-            
-            chart_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-            driver_details['chart_json'] = Markup(chart_json)
-        else:
-            driver_details['chart_json'] = Markup("{}")
-        
-        return render_template('driver_detail.html', driver=driver_details)
-        
-    except Exception as e:
-        print(f"Error in driver detail route: {e}")
-        return render_template('driver_detail.html', 
-                             error=f"Error loading data for {driver_name}.")
+    # Get drivers and races for the season
+    drivers = driver_stats(df).reset_index()
+    drivers_list = [{'name': row['Driver'], 'points': int(row['Total_Points'])} 
+                   for _, row in drivers.iterrows()]
+    
+    races_list = df[['round', 'raceName']].drop_duplicates().sort_values('round')
+    races = [{'round': int(row['round'])} for _, row in races_list.iterrows()]
+    
+    return render_template('points_progression.html',
+                         selected_season=season,
+                         seasons=seasons,
+                         drivers=drivers_list,
+                         races=races)
 
 @app.route('/api/points-progression')
-def points_progression_api():
-    season = request.args.get('season', type=int)
-    selected_drivers = request.args.getlist('drivers')
-    up_to_round = request.args.get('up_to_round', type=int)
-    
-    if not all([season, selected_drivers]):
-        return jsonify({'error': 'Missing required parameters'}), 400
-    
+def api_points_progression():
+    """API endpoint for points progression data."""
     try:
-        # Fetch season data (using cache)
-        df = get_season_data(season)
+        season = request.args.get('season')
+        selected_drivers = request.args.getlist('drivers')
+        up_to_round = request.args.get('up_to_round')
         
+        print(f"API called with season={season}, drivers={selected_drivers}, up_to_round={up_to_round}")
+        
+        if not season or not selected_drivers:
+            return jsonify({'error': 'Season and drivers are required'}), 400
+        
+        df = get_season_data(int(season))
         if df.empty:
-            return jsonify({'error': 'No data found for this season'}), 404
+            return jsonify({'error': f'No data available for season {season}'}), 404
         
-        print(f"Processing data: {len(df)} records for {len(selected_drivers)} drivers")
+        print(f"Data loaded for season {season}, total records: {len(df)}")
         
-        # Filter up to specific round if specified
+        # Filter by selected drivers
+        filtered_df = df[df['Driver'].isin(selected_drivers)].copy()
+        print(f"Filtered to selected drivers: {len(filtered_df)} records")
+        
+        # Filter by round if specified
         if up_to_round:
-            df = df[df['round'] <= up_to_round]
-            print(f"Filtered to round {up_to_round}: {len(df)} records")
+            filtered_df = filtered_df[filtered_df['round'] <= int(up_to_round)]
+            print(f"Filtered to round {up_to_round}: {len(filtered_df)} records")
         
-        # Get cumulative points
-        cum_points_df = cumulative_points(df)
+        if filtered_df.empty:
+            return jsonify({'error': 'No data found for selected criteria'}), 404
         
-        if cum_points_df.empty:
-            return jsonify({'error': 'No points data could be calculated'}), 404
+        # Create points progression manually
+        progression_data = {}
+        all_rounds = sorted(filtered_df['round'].unique())
+        print(f"Processing rounds: {all_rounds}")
         
-        print(f"Cumulative points calculated. Shape: {cum_points_df.shape}")
-        print(f"Available drivers: {list(cum_points_df.columns)}")
-        print(f"Requested drivers: {selected_drivers}")
-        
-        # Filter for selected drivers (check exact matches)
-        available_drivers = []
         for driver in selected_drivers:
-            if driver in cum_points_df.columns:
-                available_drivers.append(driver)
-            else:
-                print(f"Driver '{driver}' not found in data")
+            driver_data = filtered_df[filtered_df['Driver'] == driver].sort_values('round')
+            print(f"Processing {driver}: {len(driver_data)} races")
+            
+            # Initialize with zeros for all rounds
+            driver_points = {round_num: 0 for round_num in all_rounds}
+            
+            # Fill in actual points
+            for _, row in driver_data.iterrows():
+                driver_points[row['round']] = row['points']
+            
+            # Calculate cumulative points
+            cumulative = []
+            total = 0
+            for round_num in all_rounds:
+                total += driver_points[round_num]
+                cumulative.append(total)
+            
+            progression_data[driver] = {
+                'rounds': all_rounds,
+                'cumulative': cumulative,
+                'per_race': [driver_points[r] for r in all_rounds]
+            }
+            print(f"{driver} final points: {cumulative[-1] if cumulative else 0}")
         
-        if not available_drivers:
-            return jsonify({'error': 'None of the selected drivers found in this season'}), 404
-        
-        print(f"Found {len(available_drivers)} matching drivers: {available_drivers}")
-        
-        # Create the points progression chart
+        # Create the chart
         fig = go.Figure()
         
-        # Add a line for each driver
-        for driver in available_drivers:
-            driver_points = cum_points_df[driver]
-            rounds = driver_points.index.tolist()
-            points = driver_points.values.tolist()
-            
-            print(f"{driver}: rounds={rounds}, points={points}")
-            
-            fig.add_trace(go.Scatter(
-                x=rounds,
-                y=points,
-                mode='lines+markers',
-                name=driver,
-                line=dict(width=3),
-                marker=dict(size=8),
-                hovertemplate=f'<b>{driver}</b><br>' +
-                              'Round: %{x}<br>' +
-                              'Points: %{y}<br>' +
-                              '<extra></extra>'
-            ))
+        colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', 
+                 '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
         
-        # Get race info for better x-axis
-        try:
-            race_info = df[['round', 'raceName']].drop_duplicates().set_index('round')
-            tickvals = sorted(df['round'].unique())
-            ticktext = [f"R{r}" for r in tickvals]
-        except:
-            tickvals = sorted(cum_points_df.index.tolist())
-            ticktext = [f"R{r}" for r in tickvals]
+        for i, driver in enumerate(selected_drivers):
+            if driver in progression_data:
+                data = progression_data[driver]
+                fig.add_trace(go.Scatter(
+                    x=data['rounds'],
+                    y=data['cumulative'],
+                    mode='lines+markers',
+                    name=driver,
+                    line=dict(width=3, color=colors[i % len(colors)]),
+                    marker=dict(size=6),
+                    hovertemplate=f'<b>{driver}</b><br>Round %{{x}}<br>Points: %{{y}}<extra></extra>'
+                ))
         
-        # Customize the chart
         fig.update_layout(
-            title=f'Championship Points Progression - {season} Season',
+            title=f'{season} F1 Championship Points Progression',
             xaxis_title='Race Round',
             yaxis_title='Cumulative Points',
-            hovermode='x unified',
-            height=600,
-            showlegend=True,
             plot_bgcolor='white',
-            paper_bgcolor='white',
+            height=600,
+            margin=dict(l=50, r=50, t=70, b=50),
+            legend=dict(
+                x=0.02,
+                y=0.98,
+                bgcolor='rgba(255,255,255,0.8)',
+                bordercolor='gray',
+                borderwidth=1
+            ),
             xaxis=dict(
-                tickmode='array',
-                tickvals=tickvals,
-                ticktext=ticktext,
                 showgrid=True,
-                gridcolor='lightgray'
+                gridcolor='lightgray',
+                tickmode='linear',
+                tick0=1,
+                dtick=1
             ),
             yaxis=dict(
                 showgrid=True,
-                gridcolor='lightgray',
-                rangemode='tozero'
-            ),
-            legend=dict(
-                yanchor="top",
-                y=0.99,
-                xanchor="left",
-                x=0.01,
-                bgcolor="rgba(255,255,255,0.8)",
-                bordercolor="gray",
-                borderwidth=1
+                gridcolor='lightgray'
             )
         )
         
-        # Convert to JSON
         chart_json = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-        
-        return jsonify({
-            'chart': chart_json,
-            'season': season,
-            'drivers': available_drivers,
-            'total_rounds': len(tickvals)
-        })
+        return jsonify({'chart': chart_json})
         
     except Exception as e:
         print(f"Error in points progression API: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify({'error': f'Server error: {str(e)}'}), 500
+        return jsonify({'error': str(e)}), 500
 
-@app.route('/api/driver-image/<driver_name>/<int:season>')
-def get_driver_image_api(driver_name, season):
-    """
-    API endpoint to get driver image (for AJAX loading)
-    """
-    try:
-        image_url = get_driver_wikipedia_image(driver_name, season)
-        return jsonify({
-            'image_url': image_url,
-            'driver_name': driver_name
-        })
-    except Exception as e:
-        return jsonify({
-            'error': str(e),
-            'driver_name': driver_name
-        })
+@app.route('/driver/<driver_name>/<int:season>')
+def driver_detail(driver_name, season):
+    """Display detailed driver information."""
+    driver_details = get_driver_season_details(driver_name, season)
+    if not driver_details:
+        return render_template('driver_detail.html', error=f"No data for {driver_name} in {season}.")
+    
+    # Create improved points progression chart
+    race_results = driver_details['race_results']
+    if race_results:
+        # Sort results by round to ensure proper order
+        sorted_results = sorted(race_results, key=lambda x: x['round'])
+        
+        rounds = [race['round'] for race in sorted_results]
+        race_names = [f"R{race['round']}" for race in sorted_results]
+        points_per_race = [race['points'] for race in sorted_results]
+        positions = [race['position'] for race in sorted_results]
+        
+        # Calculate cumulative points correctly
+        cumulative_points_list = []
+        total = 0
+        for points in points_per_race:
+            total += points
+            cumulative_points_list.append(total)
+        
+        # Create the chart with both cumulative and per-race data
+        fig = go.Figure()
+        
+        # Add cumulative points line
+        fig.add_trace(go.Scatter(
+            x=rounds, 
+            y=cumulative_points_list,
+            mode='lines+markers',
+            name='Cumulative Points',
+            line=dict(width=3, color='#1f77b4'),
+            marker=dict(size=8),
+            hovertemplate='<b>Round %{x}</b><br>Cumulative Points: %{y}<br>Position: %{customdata}<extra></extra>',
+            customdata=positions
+        ))
+        
+        # Add points per race bars (on secondary y-axis)
+        fig.add_trace(go.Bar(
+            x=rounds,
+            y=points_per_race,
+            name='Points per Race',
+            yaxis='y2',
+            opacity=0.6,
+            marker_color='#ff7f0e',
+            hovertemplate='<b>Round %{x}</b><br>Points Scored: %{y}<br>Position: %{customdata}<extra></extra>',
+            customdata=positions
+        ))
+        
+        # Update layout with proper styling
+        fig.update_layout(
+            title=dict(
+                text=f'{driver_name} - {season} Season Points Progression',
+                x=0.5,
+                font=dict(size=18)
+            ),
+            xaxis=dict(
+                title='Race Round',
+                tickmode='linear',
+                tick0=1,
+                dtick=1,
+                showgrid=True,
+                gridcolor='lightgray'
+            ),
+            yaxis=dict(
+                title='Cumulative Points',
+                showgrid=True,
+                gridcolor='lightgray'
+            ),
+            yaxis2=dict(
+                title='Points per Race',
+                overlaying='y',
+                side='right',
+                showgrid=False
+            ),
+            plot_bgcolor='white',
+            height=500,
+            margin=dict(l=50, r=50, t=70, b=50),
+            legend=dict(
+                x=0.02,
+                y=0.98,
+                bgcolor='rgba(255,255,255,0.8)',
+                bordercolor='gray',
+                borderwidth=1
+            )
+        )
+        
+        driver_details['chart_json'] = Markup(json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder))
+    
+    return render_template('driver_detail.html', driver=driver_details)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
