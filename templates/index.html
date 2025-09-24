@@ -44,10 +44,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 15px;
         }
         header h1 .f1-icon {
-            font-size: 2.2rem;
+            font-size: 2.5rem;
             animation: pulse 1.5s infinite ease-in-out;
         }
         @keyframes pulse {
@@ -56,15 +56,15 @@
             100% { transform: scale(1); }
         }
         .nav-links {
-            margin-top: 15px;
+            margin-top: 20px;
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 20px;
         }
         .nav-links a {
             color: var(--white);
             text-decoration: none;
-            padding: 10px 25px;
+            padding: 12px 30px;
             border-radius: 25px;
             background: rgba(255,255,255,0.2);
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -73,161 +73,238 @@
         }
         .nav-links a:hover {
             background: rgba(255,255,255,0.4);
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
         }
         .driver-link, .constructor-link {
             color: var(--primary-red);
             text-decoration: none;
             font-weight: bold;
-            transition: color 0.3s, text-decoration 0.3s;
+            transition: all 0.3s ease;
         }
         .driver-link:hover, .constructor-link:hover {
             color: var(--secondary-red);
             text-decoration: underline;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
         .container {
             max-width: 1400px;
-            margin: 20px auto;
-            padding: 0 20px;
+            margin: 30px auto;
+            padding: 0 30px;
             flex-grow: 1;
         }
         .filters {
             background: var(--card-bg);
-            backdrop-filter: blur(10px);
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-            margin-bottom: 30px;
+            backdrop-filter: blur(15px);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 40px;
             text-align: center;
-            border: 1px solid var(--border-color);
+            border: 2px solid var(--border-color);
             animation: fadeIn 0.6s ease-out 0.3s;
             animation-fill-mode: both;
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 15px;
+            gap: 20px;
         }
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
         }
         .filters label {
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             font-weight: bold;
             color: var(--dark-gray);
+            margin-right: 15px;
         }
         .filters select {
-            padding: 10px 15px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 2px solid #ddd;
             background-color: var(--white);
-            font-size: 1rem;
-            min-width: 120px;
+            font-size: 1.1rem;
+            min-width: 150px;
             cursor: pointer;
             transition: all 0.3s ease;
-            -webkit-appearance: none; /* Remove default arrow in Chrome/Safari */
-            -moz-appearance: none;    /* Remove default arrow in Firefox */
-            appearance: none;         /* Remove default arrow */
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
             background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23000000%22%20d%3D%22M287%2C114.7L158.4%2C243.3c-2.3%2C2.3-5.2%2C3.5-8.4%2C3.5s-6.1-1.2-8.4-3.5L5.4%2C114.7c-4.5-4.5-4.5-11.7%2C0-16.2s11.7-4.5%2C16.2%2C0L145%2C214.6l123.6-123.6c4.5-4.5%2C11.7-4.5%2C16.2%2C0S291.5%2C110.2%2C287%2C114.7z%22%2F%3E%3C%2Fsvg%3E');
             background-repeat: no-repeat;
-            background-position: right 10px top 50%;
-            background-size: 12px auto;
+            background-position: right 15px top 50%;
+            background-size: 14px auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
         .filters select:focus {
             outline: none;
             border-color: var(--primary-red);
-            box-shadow: 0 0 0 3px rgba(var(--primary-red), 0.2);
-        }
-        .filters button {
-            padding: 10px 20px;
-            border-radius: 25px;
-            border: none;
-            background: var(--primary-red);
-            color: var(--white);
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        .filters button:hover {
-            background: var(--secondary-red);
-            transform: translateY(-2px);
-            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 0 0 4px rgba(230, 0, 0, 0.2);
+            transform: scale(1.02);
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); /* Responsive grid */
-            gap: 25px;
+            grid-template-columns: 1fr 1fr; /* Fixed two columns for side by side */
+            gap: 30px;
         }
         .card {
             background: var(--card-bg);
-            backdrop-filter: blur(10px);
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-            border: 1px solid var(--border-color);
-            animation: fadeIn 0.6s ease-out 0.4s;
+            backdrop-filter: blur(15px);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 2px solid var(--border-color);
+            animation: fadeIn 0.8s ease-out 0.4s;
             animation-fill-mode: both;
-            overflow: hidden; /* For table responsiveness */
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
         }
         .card h2 {
             margin-top: 0;
-            border-bottom: 2px solid #eee;
-            padding-bottom: 15px;
+            border-bottom: 3px solid #eee;
+            padding-bottom: 20px;
             color: var(--primary-red);
-            font-size: 1.8rem;
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .card h2::before {
+            content: "🏆";
+            font-size: 1.5rem;
+        }
+        .card:nth-child(2) h2::before {
+            content: "🏭";
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.95rem;
+            font-size: 1rem;
+            margin-top: 10px;
         }
         th, td {
             text-align: left;
-            padding: 12px 10px;
-            border-bottom: 1px solid #ddd;
+            padding: 15px 12px;
+            border-bottom: 1px solid #e0e0e0;
         }
         th {
-            background-color: rgba(242,242,242,0.8);
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
             font-weight: bold;
             color: var(--dark-gray);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.9rem;
+            position: sticky;
+            top: 0;
         }
-        tr {
-            transition: background-color 0.3s ease;
+        tbody tr {
+            transition: all 0.3s ease;
         }
-        tr:hover {
-            background-color: rgba(230, 0, 0, 0.05); /* Lighter hover for tables */
+        tbody tr:hover {
+            background: linear-gradient(90deg, rgba(230, 0, 0, 0.08), rgba(255, 68, 68, 0.05));
+            transform: scale(1.01);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .footer {
             background: rgba(33, 37, 41, 0.95);
             color: white;
             text-align: center;
-            padding: 20px;
-            margin-top: 40px;
+            padding: 25px;
+            margin-top: 50px;
             flex-shrink: 0;
+            backdrop-filter: blur(10px);
+        }
+        .footer p {
+            margin: 0;
+            font-size: 1.2rem;
         }
         .footer a {
             color: var(--secondary-red);
             text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s ease;
         }
         .footer a:hover {
-            text-decoration: underline;
+            color: #ff8888;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
         .error {
             background: rgba(255, 204, 204, 0.9);
-            border: 1px solid var(--primary-red);
-            border-radius: 8px;
-            padding: 15px;
+            border: 2px solid var(--primary-red);
+            border-radius: 15px;
+            padding: 25px;
             color: var(--primary-red);
             text-align: center;
-            margin-top: 20px;
+            margin-top: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 25px rgba(230, 0, 0, 0.2);
         }
-        /* Make tables scrollable on small screens */
         .table-responsive {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr; /* Stack on smaller screens */
+                gap: 25px;
+            }
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 15px;
+            }
+            .filters {
+                flex-direction: column;
+                gap: 15px;
+                padding: 20px;
+            }
+            .filters label {
+                margin-right: 0;
+                margin-bottom: 8px;
+            }
+            .nav-links {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .nav-links a {
+                padding: 10px 20px;
+                font-size: 0.9rem;
+            }
+            header h1 {
+                font-size: 2.2rem;
+                flex-direction: column;
+                gap: 5px;
+            }
+            .card {
+                padding: 20px;
+            }
+            table {
+                font-size: 0.9rem;
+            }
+            th, td {
+                padding: 10px 8px;
+            }
+            body {
+                background-attachment: scroll;
+            }
+        }
+        
+        /* Loading animation for table rows */
+        .loading-row {
+            animation: shimmer 1.5s infinite linear;
+        }
+        @keyframes shimmer {
+            0% { background-position: -1000px 0; }
+            100% { background-position: 1000px 0; }
         }
     </style>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
@@ -239,6 +316,7 @@
         <div class="nav-links">
             <a href="/">Season Overview</a>
             <a href="/points-progression">Points Progression</a>
+            <a href="/races">Race Details</a>
         </div>
     </header>
 
@@ -250,7 +328,7 @@
                     <option value="{{ year }}" {% if year == selected_season %}selected{% endif %}>{{ year }}</option>
                 {% endfor %}
             </select>
-            </div>
+        </div>
 
         {% if error %}
             <div class="error">
@@ -260,11 +338,11 @@
         {% else %}
             <div class="grid">
                 <div class="card">
-                    <h2>🏆 Driver Standings</h2>
+                    <h2>Driver Standings</h2>
                     <div id="driver-table-container" class="table-responsive">{{ driver_table|safe }}</div>
                 </div>
                 <div class="card">
-                    <h2>🏭 Constructor Standings</h2>
+                    <h2>Constructor Standings</h2>
                     <div id="constructor-table-container" class="table-responsive">{{ constructor_table|safe }}</div>
                 </div>
             </div>
@@ -279,7 +357,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             const selectedSeason = {{ selected_season }};
 
-            // Enhanced season selection - submit on change
+            // Enhanced season selection
             document.getElementById('season').addEventListener('change', function() {
                 window.location.href = '/' + this.value;
             });
@@ -289,7 +367,6 @@
             if (driverTable) {
                 const rows = driverTable.querySelectorAll('table tbody tr');
                 rows.forEach(row => {
-                    // Check if the row has enough cells and the first cell contains text
                     if (row.cells.length > 0 && row.cells[0].textContent.trim() !== '') {
                         const driverCell = row.cells[0];
                         const driverName = driverCell.textContent.trim();
@@ -308,7 +385,6 @@
             if (constructorTable) {
                 const rows = constructorTable.querySelectorAll('table tbody tr');
                 rows.forEach(row => {
-                    // Check if the row has enough cells and the first cell contains text
                     if (row.cells.length > 0 && row.cells[0].textContent.trim() !== '') {
                         const constructorCell = row.cells[0];
                         const constructorName = constructorCell.textContent.trim();

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F1 Race Details - {{ selected_season if selected_season else 'Season' }}</title>
+    <style>
+        :root {
+            --primary-red: #e60000;
+            --secondary-red: #ff4444;
+            --light-gray: #f8f9fa;
+            --dark-gray: #212529;
+            --white: #ffffff;
+            --card-bg: rgba(255,255,255,0.95);
+            --border-color: rgba(255,255,255,0.2);
+            --header-gradient: linear-gradient(135deg, var(--primary-red), var(--secondary-red));
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)),
+                       url('{{ f1_logo if f1_logo else "https://upload.wikimedia.org/wikipedia/commons/3/33/F1.svg" }}') center/cover fixed;
+            color: var(--dark-gray);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            background: var(--header-gradient);
+            color: var(--white);
+            padding: 20px 40px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            animation: slideInDown 0.8s ease-out;
+        }
+        
+        @keyframes slideInDown {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        header h1 {
+            margin: 0;
+            font-size: 2.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .nav-links {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        .nav-links a {
+            color: var(--white);
+            text-decoration: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            background: rgba(255,255,255,0.2);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            font-weight: bold;
+            letter-spacing: 0.5px;
+        }
+        
+        .nav-links a:hover {
+            background: rgba(255,255,255,0.4);
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 30px;
+            flex-grow: 1;
+        }
+        
+        .filters {
+            background: var(--card-bg);
+            backdrop-filter: blur(15px);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            margin-bottom: 40px;
+            text-align: center;
+            border: 2px solid var(--border-color);
+            animation: fadeIn 0.6s ease-out 0.3s;
+            animation-fill-mode: both;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .filters label {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--dark-gray);
+            margin-right: 15px;
+        }
+        
+        .filters select {
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: 2px solid #ddd;
+            background-color: var(--white);
+            font-size: 1.1rem;
+            min-width: 150px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        
+        .filters select:focus {
+            outline: none;
+            border-color: var(--primary-red);
+            box-shadow: 0 0 0 4px rgba(230, 0, 0, 0.2);
+        }
+        
+        .races-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+        
+        .race-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(15px);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            border: 2px solid var(--border-color);
+            transition: all 0.3s ease;
+            animation: fadeIn 0.6s ease-out;
+            animation-fill-mode: both;
+        }
+        
+        .race-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+        
+        .race-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #eee;
+        }
+        
+        .race-round {
+            background: linear-gradient(135deg, var(--primary-red), var(--secondary-red));
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .race-date {
+            color: #666;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .race-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--dark-gray);
+            margin: 10px 0;
+        }
+        
+        .race-title a {
+            color: var(--dark-gray);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .race-title a:hover {
+            color: var(--primary-red);
+        }
+        
+        .race-circuit {
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+        
+        .race-description {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #555;
+            text-align: justify;
+        }
+        
+        .error {
+            background: rgba(255, 204, 204, 0.9);
+            border: 2px solid var(--primary-red);
+            border-radius: 15px;
+            padding: 25px;
+            color: var(--primary-red);
+            text-align: center;
+            margin-top: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 25px rgba(230, 0, 0, 0.2);
+        }
+        
+        .footer {
+            background: rgba(33, 37, 41, 0.95);
+            color: white;
+            text-align: center;
+            padding: 25px;
+            margin-top: 50px;
+            flex-shrink: 0;
+            backdrop-filter: blur(10px);
+        }
+        
+        .footer p {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+        
+        .footer a {
+            color: var(--secondary-red);
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+        
+        .footer a:hover {
+            color: #ff8888;
+        }
+        
+        @media (max-width: 768px) {
+            .races-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .container {
+                padding: 0 15px;
+            }
+            
+            .race-card {
+                padding: 20px;
+            }
+            
+            .race-header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            body {
+                background-attachment: scroll;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🏁 F1 Race Details</h1>
+        <div class="nav-links">
+            <a href="/">Season Overview</a>
+            <a href="/points-progression">Points Progression</a>
+            <a href="/races">Race Details</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="filters">
+            <label for="season">Select Season:</label>
+            <select id="season" name="season">
+                {% for year in seasons %}
+                    <option value="{{ year }}" {% if year == selected_season %}selected{% endif %}>{{ year }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        {% if error %}
+            <div class="error">
+                <h2>Data Notice</h2>
+                <p>{{ error }}</p>
+            </div>
+        {% else %}
+            <div class="races-grid">
+                {% for race in races %}
+                <div class="race-card" style="animation-delay: {{ loop.index0 * 0.1 }}s;">
+                    <div class="race-header">
+                        <div class="race-round">Round {{ race.round }}</div>
+                        <div class="race-date">{{ race.date }}</div>
+                    </div>
+                    
+                    <h3 class="race-title">
+                        <a href="/race/{{ selected_season }}/{{ race.round }}">{{ race.name }}</a>
+                    </h3>
+                    
+                    <div class="race-circuit">🏁 {{ race.circuit }}</div>
+                    
+                    <div class="race-description">{{ race.description }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+
+    <footer class="footer">
+        <p>Created by <a href="https://github.com/krish-25k" target="_blank">krish-25k</a></p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle season change
+            document.getElementById('season').addEventListener('change', function() {
+                window.location.href = '/races/' + this.value;
+            });
+        });
+    </script>
+
+</body>
+</html>

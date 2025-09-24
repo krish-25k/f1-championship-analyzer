@@ -134,6 +134,42 @@ def get_team_image_from_wikipedia(team_name, season):
     image_cache[cache_key] = None
     return None
 
+def get_team_bio_from_wikipedia(team_name):
+    """Fetch team biography from Wikipedia."""
+    cache_key = f"team_bio_{team_name}"
+    if cache_key in image_cache:
+        return image_cache[cache_key]
+
+    try:
+        # Clean team name for better search
+        clean_team = re.sub(r'(f1 team|racing team|team|f1|gp)$', '', team_name, flags=re.IGNORECASE).strip()
+        
+        search_terms = [
+            f"{clean_team} Formula 1 team",
+            f"{clean_team} F1 racing team",
+            f"{clean_team} motorsport",
+            clean_team
+        ]
+        
+        for term in search_terms:
+            try:
+                search_results = wikipedia.search(term, results=3)
+                if search_results:
+                    page = wikipedia.page(search_results[0], auto_suggest=True)
+                    summary = page.summary[:500] + "..." if len(page.summary) > 500 else page.summary
+                    image_cache[cache_key] = summary
+                    return summary
+            except (wikipedia.exceptions.PageError, wikipedia.exceptions.DisambiguationError):
+                continue
+            except Exception as e:
+                print(f"Error fetching team bio for {term}: {e}")
+                continue
+        
+        return "Team information not available from Wikipedia."
+    except Exception as e:
+        print(f"Error fetching team bio for {team_name}: {e}")
+        return "Team information not available."
+
 def get_driver_details_from_wikipedia(driver_name):
     """Fetch driver photo and biography from Wikipedia with better image selection."""
     cache_key = f"driver_bio_{driver_name}"
@@ -259,6 +295,7 @@ def get_team_season_details(team_name, season):
         return None
 
     team_image = get_team_image_from_wikipedia(team_name, season)
+    team_bio = get_team_bio_from_wikipedia(team_name)
 
     total_points = team_data['points'].sum()
     wins = (team_data['position'] == 1).sum()
@@ -270,12 +307,51 @@ def get_team_season_details(team_name, season):
         'name': team_name,
         'season': season,
         'team_image': team_image,
+        'team_bio': team_bio,
         'total_points': int(total_points),
         'wins': int(wins),
-        'drivers': drivers_in_season, # This is the list of drivers
-        'race_results': team_data.to_dict('records') # Full race results for the team
+        'drivers': drivers_in_season,
+        'race_results': team_data.to_dict('records')
     }
 
+def get_race_details_from_wikipedia(race_name, circuit_name):
+    """Get race and circuit details from Wikipedia."""
+    cache_key = f"race_{race_name}_{circuit_name}"
+    if cache_key in image_cache:
+        return image_cache[cache_key]
+
+    try:
+        # Try different search approaches
+        search_terms = [
+            f"{race_name} Formula 1",
+            f"{circuit_name} race track",
+            circuit_name,
+            race_name
+        ]
+        
+        for term in search_terms:
+            try:
+                search_results = wikipedia.search(term, results=3)
+                if search_results:
+                    page = wikipedia.page(search_results[0])
+                    summary = page.summary[:400] + "..." if len(page.summary) > 400 else page.summary
+                    image_cache[cache_key] = {
+                        'description': summary,
+                        'title': page.title
+                    }
+                    return image_cache[cache_key]
+            except:
+                continue
+        
+        return {
+            'description': f"Information about {race_name} at {circuit_name} not available.",
+            'title': race_name
+        }
+    except Exception as e:
+        return {
+            'description': f"Unable to fetch race information.",
+            'title': race_name
+        }
 
 @app.route('/api/f1-logo')
 def api_f1_logo():
@@ -309,6 +385,69 @@ def index(season=None):
                            driver_table=driver_table,
                            constructor_table=constructor_table,
                            f1_logo=f1_logo)
+
+@app.route('/races')
+@app.route('/races/<int:season>')
+def races(season=None):
+    current_year = datetime.datetime.now().year
+    season = season or current_year
+    seasons = list(range(current_year, 1949, -1))
+
+    df = get_season_data(season)
+    if df.empty:
+        return render_template('races.html', error=f"No data for {season}.", seasons=seasons, selected_season=season)
+
+    f1_logo = get_f1_logo_from_wikipedia()
+
+    # Get unique races
+    races_data = df[['round', 'raceName', 'date', 'Circuit_circuitName']].drop_duplicates().sort_values('round')
+    
+    # Add Wikipedia info for each race
+    races_list = []
+    for _, race in races_data.iterrows():
+        race_info = get_race_details_from_wikipedia(race['raceName'], race['Circuit_circuitName'])
+        races_list.append({
+            'round': race['round'],
+            'name': race['raceName'],
+            'date': race['date'],
+            'circuit': race['Circuit_circuitName'],
+            'description': race_info['description'],
+            'wiki_title': race_info['title']
+        })
+
+    return render_template('races.html',
+                         selected_season=season,
+                         seasons=seasons,
+                         races=races_list,
+                         f1_logo=f1_logo)
+
+@app.route('/race/<int:season>/<int:round_num>')
+def race_detail(season, round_num):
+    df = get_season_data(season)
+    if df.empty:
+        return render_template('race_detail.html', error=f"No data for {season}.")
+
+    race_data = df[df['round'] == round_num].copy()
+    if race_data.empty:
+        return render_template('race_detail.html', error=f"No data for round {round_num} in {season}.")
+
+    race_data = race_data.sort_values('position')
+    
+    race_info = {
+        'round': round_num,
+        'name': race_data.iloc[0]['raceName'],
+        'date': race_data.iloc[0]['date'],
+        'circuit': race_data.iloc[0]['Circuit_circuitName'],
+        'season': season,
+        'results': race_data.to_dict('records')
+    }
+
+    # Get Wikipedia info
+    wiki_info = get_race_details_from_wikipedia(race_info['name'], race_info['circuit'])
+    race_info['description'] = wiki_info['description']
+    race_info['wiki_title'] = wiki_info['title']
+
+    return render_template('race_detail.html', race=race_info)
 
 @app.route('/points-progression')
 @app.route('/points-progression/<int:season>')
@@ -552,7 +691,7 @@ def team_detail(team_name, season):
             y=team_points_per_round['cumulative_points'],
             mode='lines+markers',
             name='Cumulative Points',
-            line=dict(width=3, color='#1f77b4'), # Blue for cumulative
+            line=dict(width=3, color='#1f77b4'),
             marker=dict(size=8),
             hovertemplate='<b>Round %{x}</b><br>Cumulative Points: %{y}<extra></extra>'
         ))
@@ -562,9 +701,9 @@ def team_detail(team_name, season):
             x=team_points_per_round['round'],
             y=team_points_per_round['points'],
             name='Points per Race',
-            yaxis='y2', # Use a secondary y-axis
+            yaxis='y2',
             opacity=0.6,
-            marker_color='#ff7f0e', # Orange for points per race
+            marker_color='#ff7f0e',
             hovertemplate='<b>Round %{x}</b><br>Points Scored: %{y}<extra></extra>'
         ))
 
@@ -587,9 +726,9 @@ def team_detail(team_name, season):
                 showgrid=True,
                 gridcolor='lightgray'
             ),
-            yaxis2=dict( # Secondary Y-axis definition
+            yaxis2=dict(
                 title='Points per Race',
-                overlaying='y', # Overlay on the primary y-axis
+                overlaying='y',
                 side='right',
                 showgrid=False
             ),
